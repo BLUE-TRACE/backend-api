@@ -59,38 +59,30 @@ app.post('/api/register', async (req, res) => {
 // ==========================================
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
-
     try {
         // Step 1: Find the user in the database
         const [users] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
-
         if (users.length === 0) {
             return res.status(401).json({ error: 'Invalid username or password.' });
         }
-
         const user = users[0];
-
         // Step 2: Check if the password matches the hashed password in the database
         const isMatch = await bcrypt.compare(password, user.password);
-
         if (!isMatch) {
             return res.status(401).json({ error: 'Invalid username or password.' });
         }
-
         // Step 3: Create a secure JWT token (the "digital key")
         const token = jwt.sign(
             { userId: user.id, role: user.role }, 
             process.env.JWT_SECRET, 
             { expiresIn: '8h' } // Token expires in 8 hours
         );
-
         // Step 4: Send the token and user role back to the React web app
         res.json({ 
             message: 'Login successful!', 
             token: token, 
             role: user.role 
         });
-
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Server error during login.' });
