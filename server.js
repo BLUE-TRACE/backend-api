@@ -259,7 +259,6 @@ app.post('/api/scan', async (req, res) => {
 app.get('/api/live-attendance/:sessionId', async (req, res) => {
     // We grab the session ID directly from the URL (e.g., /api/live-attendance/1)
     const { sessionId } = req.params;
-
     try {
         // We use a SQL JOIN to combine the attendance_logs table with the users table.
         // This way, React gets the actual student names, not just their ID numbers.
@@ -271,18 +270,17 @@ app.get('/api/live-attendance/:sessionId', async (req, res) => {
              ORDER BY a.timestamp DESC`,
             [sessionId]
         );
-
         res.status(200).json({
             message: 'Live attendance fetched successfully!',
             totalPresent: attendanceData.length,
             students: attendanceData
         });
-
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Server error while fetching live attendance.' });
     }
 });
+
 
 
 
