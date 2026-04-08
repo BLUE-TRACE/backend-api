@@ -454,18 +454,15 @@ app.post('/api/enroll', async (req, res) => {
 app.get('/api/reports/session/:sessionId', async (req, res) => {
     // We get the specific session ID from the URL
     const { sessionId } = req.params;
-
     try {
         // Step 1: Find the session to see which course it belongs to
         const [sessions] = await db.query(
             'SELECT course_code, start_time, status FROM sessions WHERE id = ?', 
             [sessionId]
-        );
-        
+        );       
         if (sessions.length === 0) {
             return res.status(404).json({ error: 'Session not found.' });
-        }
-        
+        }       
         const sessionData = sessions[0];
         const courseCode = sessionData.course_code;
 
@@ -477,7 +474,6 @@ app.get('/api/reports/session/:sessionId', async (req, res) => {
              WHERE e.course_code = ?`,
             [courseCode]
         );
-
         // Step 3: Get ONLY the students who were marked PRESENT by the Bluetooth scanner
         const [presentRecords] = await db.query(
             `SELECT student_id 
@@ -485,15 +481,12 @@ app.get('/api/reports/session/:sessionId', async (req, res) => {
              WHERE session_id = ? AND status = 'present'`,
             [sessionId]
         );
-
         // Step 4: The Math Engine - Calculate who is missing
         // First, extract just the ID numbers of the present students into a simple list
         const presentStudentIds = presentRecords.map(record => record.student_id);
-
         // Filter the master enrollment list into two separate groups
         const presentList = enrolledStudents.filter(student => presentStudentIds.includes(student.student_id));
         const absentList = enrolledStudents.filter(student => !presentStudentIds.includes(student.student_id));
-
         // Step 5: Send the beautiful, structured report back to the frontend
         res.status(200).json({
             message: 'Attendance report generated successfully!',
