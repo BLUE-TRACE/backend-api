@@ -294,7 +294,6 @@ app.get('/api/reports/attendance', async (req, res) => {
     if (!courseCode) {
         return res.status(400).json({ error: 'Course code is required to generate a report.' });
     }
-
     try {
         // We use a complex SQL query to join 3 tables: Sessions, Attendance_Logs, and Users.
         // This builds a complete historical timeline of who attended which lecture.
@@ -311,7 +310,6 @@ app.get('/api/reports/attendance', async (req, res) => {
             WHERE s.course_code = ?
             ORDER BY s.start_time DESC, u.username ASC
         `;
-
         const [reportData] = await db.query(query, [courseCode]);
 
         res.status(200).json({
