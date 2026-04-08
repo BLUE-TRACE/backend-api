@@ -3,11 +3,11 @@ const cors = require('cors');
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('./db'); // This imports your database connection
+const db = require('./db'); 
 
 const app = express();
 
-// Middleware (Allows React to talk to this server and parses JSON data)
+
 app.use(cors());
 app.use(express.json());
 
