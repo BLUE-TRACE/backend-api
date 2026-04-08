@@ -403,11 +403,9 @@ app.post('/api/assign-lecturer', async (req, res) => {
 app.post('/api/enroll', async (req, res) => {
     // The frontend sends the Student's ID and the Course Code they want to join
     const { studentId, courseCode } = req.body;
-
     if (!studentId || !courseCode) {
         return res.status(400).json({ error: 'Student ID and Course Code are required.' });
     }
-
     try {
         // Step 1: Look up the student to see what year they are in
         const [students] = await db.query('SELECT role, year_level FROM users WHERE id = ?', [studentId]);
@@ -431,15 +429,12 @@ app.post('/api/enroll', async (req, res) => {
                 error: `Enrollment denied. This is a Year ${courseYear} course, but you are a Year ${studentYear} student.` 
             });
         }
-
         // Step 4: If they pass the check, officially enroll them in the database
         await db.query(
             'INSERT INTO enrollments (student_id, course_code) VALUES (?, ?)',
             [studentId, courseCode]
         );
-
         res.status(200).json({ message: `Successfully enrolled in ${courseCode}!` });
-
     } catch (error) {
         // Stop them from enrolling in the same course twice
         if (error.code === 'ER_DUP_ENTRY') {
