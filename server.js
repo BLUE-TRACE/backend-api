@@ -333,28 +333,23 @@ app.get('/api/reports/attendance', async (req, res) => {
 app.post('/api/courses', async (req, res) => {
     // We added yearLevel to the requested data
     const { courseCode, courseName, yearLevel } = req.body;
-
     // Make sure the frontend sent all three pieces of information
     if (!courseCode || !courseName || !yearLevel) {
         return res.status(400).json({ error: 'Course code, name, and year level are required.' });
     }
-
     // Safety Check: Ensure the year level is a valid number (1, 2, 3, or 4)
     if (![1, 2, 3, 4].includes(parseInt(yearLevel))) {
         return res.status(400).json({ error: 'Year level must be 1, 2, 3, or 4.' });
     }
-
     try {
         // Update the SQL query to insert all three values
         await db.query(
             'INSERT INTO courses (course_code, course_name, year_level) VALUES (?, ?, ?)',
             [courseCode, courseName, yearLevel]
         );
-
         res.status(201).json({ 
             message: `Year ${yearLevel} Course ${courseCode} created successfully!` 
         });
-
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ error: 'This course code already exists.' });
