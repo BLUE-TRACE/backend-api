@@ -204,7 +204,6 @@ app.post('/api/scan', async (req, res) => {
     if (!sessionId || !macAddresses || macAddresses.length === 0) {
         return res.status(400).json({ error: 'Missing session ID or MAC addresses.' });
     }
-
     try {
         // Step 1: Double-check that this lecture session is still "active"
         const [sessions] = await db.query(
@@ -215,7 +214,6 @@ app.post('/api/scan', async (req, res) => {
         if (sessions.length === 0) {
             return res.status(400).json({ error: 'Session is closed or does not exist.' });
         }
-
         // Step 2: Look up registered devices, BUT only allow students enrolled in this specific course
         // This prevents the scanner from picking up students in the classroom next door!
         const [devices] = await db.query(
@@ -226,7 +224,6 @@ app.post('/api/scan', async (req, res) => {
              WHERE d.mac_address IN (?) AND s.id = ?`,
             [macAddresses, sessionId]
         );
-
         if (devices.length === 0) {
             return res.status(200).json({ 
                 message: 'No enrolled student devices found in this scan.',
@@ -234,28 +231,25 @@ app.post('/api/scan', async (req, res) => {
                 newStudentsMarked: 0
             });
         }
-
         // Step 3: Prepare the attendance data to be saved
         // This creates a format like: [[session_id, student_1, 'present'], [session_id, student_2, 'present']]
         const attendanceRecords = devices.map(device => [sessionId, device.student_id, 'present']);
-
         // Step 4: Save them as "Present" in the database!
         const [result] = await db.query(
             'INSERT IGNORE INTO attendance_logs (session_id, student_id, status) VALUES ?',
             [attendanceRecords]
         );
-
         res.status(200).json({ 
             message: 'Scan processed successfully!',
             totalDevicesFound: devices.length,
             newStudentsMarked: result.affectedRows // Shows '0' if they were already marked present in a previous scan
         });
-
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Server error while processing the Bluetooth scan.' });
     }
 });
+
 
 
 
