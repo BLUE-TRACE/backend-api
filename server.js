@@ -97,7 +97,6 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/register-device', async (req, res) => {
     // The web app will send the student's ID and their phone's MAC address
     const { studentId, macAddress } = req.body;
-
     try {
         // Insert the MAC address into the database. 
         // If the student_id already exists, update their old MAC address with the new one.
@@ -107,12 +106,10 @@ app.post('/api/register-device', async (req, res) => {
              ON DUPLICATE KEY UPDATE mac_address = ?`,
             [studentId, macAddress, macAddress]
         );
-
         res.status(200).json({ 
             message: 'Device registered successfully!',
             macAddress: macAddress
         });
-
     } catch (error) {
         // If the MAC address is exactly the same as another student's (fraud)
         if (error.code === 'ER_DUP_ENTRY') {
@@ -124,6 +121,7 @@ app.post('/api/register-device', async (req, res) => {
         res.status(500).json({ error: 'Server error during device registration.' });
     }
 });
+
 
 
 
