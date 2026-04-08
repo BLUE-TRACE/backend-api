@@ -168,27 +168,22 @@ app.post('/api/start-session', async (req, res) => {
 
 
 
-
 // ==========================================
 // 5. STOP LECTURE SESSION API
 // ==========================================
 app.post('/api/stop-session', async (req, res) => {
     // The React web app sends the specific Session ID to close it
     const { sessionId } = req.body;
-
     try {
         // Update the session status in the database to 'closed'
         const [result] = await db.query(
             `UPDATE sessions SET status = 'closed' WHERE id = ?`,
             [sessionId]
         );
-
         if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Session not found.' });
         }
-
         res.status(200).json({ message: 'Lecture session closed successfully!' });
-
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Server error while stopping the session.' });
