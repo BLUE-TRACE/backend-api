@@ -27,26 +27,21 @@ const PORT = process.env.PORT || 5000;
 app.post('/api/register', async (req, res) => {
     // We added yearLevel to the requested data
     const { username, password, role, yearLevel } = req.body;
-
     try {
         // Safety check: If they are a student, they MUST provide a year level
         if (role === 'student' && !yearLevel) {
             return res.status(400).json({ error: 'Students must provide a year level (1, 2, 3, or 4).' });
         }
-
         const hashedPassword = await bcrypt.hash(password, 10);
-
         // Insert the user. If they aren't a student, year_level just stays NULL.
         const [result] = await db.query(
             'INSERT INTO users (username, password, role, year_level) VALUES (?, ?, ?, ?)',
             [username, hashedPassword, role, role === 'student' ? yearLevel : null]
         );
-
         res.status(201).json({ 
             message: 'User registered successfully!', 
             userId: result.insertId 
         });
-
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ error: 'Username already exists.' });
