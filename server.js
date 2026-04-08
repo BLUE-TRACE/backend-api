@@ -125,17 +125,16 @@ app.post('/api/register-device', async (req, res) => {
 
 
 
+
 // ==========================================
 // 4. START LECTURE SESSION API (Secured)
 // ==========================================
 app.post('/api/start-session', async (req, res) => {
     // The React web app sends the Course Code and the Lecturer's ID
     const { courseCode, lecturerId } = req.body;
-
     if (!courseCode || !lecturerId) {
         return res.status(400).json({ error: 'Course Code and Lecturer ID are required.' });
     }
-
     try {
         // --- NEW SECURITY CHECK ---
         // Verify that this specific lecturer is actually assigned to teach this course
@@ -143,31 +142,29 @@ app.post('/api/start-session', async (req, res) => {
             'SELECT * FROM lecturer_assignments WHERE lecturer_id = ? AND course_code = ?',
             [lecturerId, courseCode]
         );
-
         if (assignment.length === 0) {
             return res.status(403).json({ 
                 error: `Access Denied: Lecturer ${lecturerId} is not assigned to teach ${courseCode}.` 
             });
         }
         // --------------------------
-
         // If they pass the check, create the active session
         const [result] = await db.query(
             `INSERT INTO sessions (course_code, lecturer_id, status) 
              VALUES (?, ?, 'active')`,
             [courseCode, lecturerId]
         );
-
         res.status(201).json({ 
             message: `Lecture session for ${courseCode} started successfully!`,
             sessionId: result.insertId 
         });
-
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Server error while starting the session.' });
     }
 });
+
+
 
 
 
