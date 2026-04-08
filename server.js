@@ -369,21 +369,17 @@ app.post('/api/courses', async (req, res) => {
 app.post('/api/assign-lecturer', async (req, res) => {
     // The frontend sends the Lecturer's user ID and the Course Code
     const { lecturerId, courseCode } = req.body;
-
     if (!lecturerId || !courseCode) {
         return res.status(400).json({ error: 'Lecturer ID and Course Code are required.' });
     }
-
     try {
         await db.query(
             'INSERT INTO lecturer_assignments (lecturer_id, course_code) VALUES (?, ?)',
             [lecturerId, courseCode]
         );
-
         res.status(200).json({ 
             message: `Lecturer ${lecturerId} is now assigned to teach ${courseCode}!` 
         });
-
     } catch (error) {
         // If they try to assign the same lecturer to the same course twice
         if (error.code === 'ER_DUP_ENTRY') {
