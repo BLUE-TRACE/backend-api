@@ -1,3 +1,4 @@
+const { spawn } = require('child_process');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -514,6 +515,36 @@ app.get('/api/reports/session/:sessionId', async (req, res) => {
 });
 
 
+
+
+// Endpoint to trigger the REAL Python Bluetooth script
+app.post('/api/trigger-hardware-scan', (req, res) => {
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+        return res.status(400).json({ error: "Missing sessionId" });
+    }
+
+    console.log(`🚀 Frontend requested a real scan for Session: ${sessionId}`);
+
+    // This tells Node to run: python scanner.py <sessionId>
+    const pythonProcess = spawn('python', ['scanner.py', sessionId]);
+
+    // This grabs any print() statements from Python and shows them in the Node terminal
+    pythonProcess.stdout.on('data', (data) => {
+        console.log(`🐍 Python: ${data}`);
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+        console.error(`❌ Python Error: ${data}`);
+    });
+
+    pythonProcess.on('close', (code) => {
+        console.log(`🛑 Python scanner finished. (Code ${code})`);
+    });
+
+    res.json({ message: "Hardware scan started successfully!" });
+});
 
 
 app.listen(PORT, async () => {
