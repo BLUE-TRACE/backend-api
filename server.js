@@ -82,9 +82,10 @@ app.post('/api/login', async (req, res) => {
         );
 
         userData = {
-            id: user.id,
-            username: user.username,
-            yearLevel: user.year_level
+            id: user?.id,
+            username: user?.username,
+            yearLevel: user?.year_level,
+            role: user?.role
         };
 
         // Step 4: Send the token and user role back to the React web app
