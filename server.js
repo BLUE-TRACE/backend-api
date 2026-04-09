@@ -25,8 +25,10 @@ const PORT = process.env.PORT || 5000;
 // 1. USER REGISTRATION API
 // ==========================================
 app.post('/api/register', async (req, res) => {
+    console.log('Received registration request:', req.body,res.body);
     // We added yearLevel to the requested data
     const { username, password, role, yearLevel } = req.body;
+    console.log('Parsed registration data:', { username, role, yearLevel });
     try {
         // Safety check: If they are a student, they MUST provide a year level
         if (role === 'student' && !yearLevel) {
@@ -77,11 +79,19 @@ app.post('/api/login', async (req, res) => {
             process.env.JWT_SECRET, 
             { expiresIn: '8h' } // Token expires in 8 hours
         );
+
+        userData = {
+            id: user.id,
+            username: user.username,
+            yearLevel: user.year_level
+        };
+
         // Step 4: Send the token and user role back to the React web app
         res.json({ 
             message: 'Login successful!', 
             token: token, 
-            role: user.role 
+            role: user.role,
+            user: userData
         });
     } catch (error) {
         console.error(error);
