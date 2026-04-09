@@ -577,7 +577,7 @@ app.get('/api/timetable/:userId', async (req, res) => {
             const [studentCourses] = await db.query(`
                 SELECT c.course_code, c.course_name, c.hall, c.day, c.start_time, c.end_time, c.is_cancelled 
                 FROM courses c
-                JOIN student_enrollments se ON c.course_code = se.course_code
+                JOIN enrollments se ON c.course_code = se.course_code
                 WHERE se.student_id = ?
             `, [userId]);
             
@@ -588,7 +588,7 @@ app.get('/api/timetable/:userId', async (req, res) => {
             const [lecturerCourses] = await db.query(`
                 SELECT c.course_code, c.course_name, c.hall, c.day, c.start_time, c.end_time, c.is_cancelled 
                 FROM courses c
-                JOIN lecturer_assignment la ON c.course_code = la.course_code
+                JOIN lecturer_assignments la ON c.course_code = la.course_code
                 WHERE la.lecturer_id = ?
             `, [userId]);
             courses = lecturerCourses;
