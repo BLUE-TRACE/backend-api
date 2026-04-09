@@ -573,13 +573,16 @@ app.get('/api/timetable/:userId', async (req, res) => {
 
         // 2. Fetch the correct courses based on their role
         if (user.role === 'student') {
-            // Students get courses matching their year level
-            const [studentCourses] = await db.query(
-                'SELECT course_code, course_name, hall, day, start_time, end_time, is_cancelled FROM courses WHERE year_level = ?',
-                [user.year_level]
-            );
+            // Students get courses joined from the enrollment table
+            const [studentCourses] = await db.query(`
+                SELECT c.course_code, c.course_name, c.hall, c.day, c.start_time, c.end_time, c.is_cancelled 
+                FROM courses c
+                JOIN student_enrollments se ON c.course_code = se.course_code
+                WHERE se.student_id = ?
+            `, [userId]);
+            
             courses = studentCourses;
-        } 
+        }
         else if (user.role === 'lecturer') {
             // Lecturers get courses joined from the 'lecturer_assignment' table
             const [lecturerCourses] = await db.query(`
