@@ -554,6 +554,90 @@ app.get('/api/reports/session/:sessionId', async (req, res) => {
 
 
 
+// ==========================================
+// 13. GET USER TIMETABLE API
+// ==========================================
+app.get('/api/timetable/:userId', async (req, res) => {
+    const { userId } = req.params;
+
+    try {
+        // 1. First, find out who this user is (Student or Lecturer?)
+        const [users] = await db.query('SELECT role, year_level FROM users WHERE id = ?', [userId]);
+        
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+        const user = users[0];
+
+        let courses = [];
+
+        // 2. Fetch the correct courses based on their role
+        if (user.role === 'student') {
+            // Students get courses matching their year level
+            const [studentCourses] = await db.query(
+                'SELECT course_code, course_name, hall, day, start_time, end_time, is_cancelled FROM courses WHERE year_level = ?',
+                [user.year_level]
+            );
+            courses = studentCourses;
+        } 
+        else if (user.role === 'lecturer') {
+            // Lecturers get courses joined from the 'lecturer_assignment' table
+            const [lecturerCourses] = await db.query(`
+                SELECT c.course_code, c.course_name, c.hall, c.day, c.start_time, c.end_time, c.is_cancelled 
+                FROM courses c
+                JOIN lecturer_assignment la ON c.course_code = la.course_code
+                WHERE la.lecturer_id = ?
+            `, [userId]);
+            courses = lecturerCourses;
+        }
+
+        // 3. Format the data perfectly for the React Frontend (Group by Day)
+        const timetable = {
+            Monday: [],
+            Tuesday: [],
+            Wednesday: [],
+            Thursday: [],
+            Friday: []
+        };
+
+        // Sort the courses into their specific days
+        courses.forEach(course => {
+            // Only add the course if the day is valid (ignores NULL or misspelled days)
+            if (course.day && timetable[course.day]) {
+                timetable[course.day].push(course);
+            }
+        });
+
+        res.json({ timetable });
+
+    } catch (error) {
+        console.error('Timetable Error:', error);
+        res.status(500).json({ error: 'Server error while fetching timetable.' });
+    }
+});
+
+
+
+// ==========================================
+// 14. CANCEL COURSE API (For Lecturers)
+// ==========================================
+app.put('/api/courses/:courseCode/cancel', async (req, res) => {
+    const { courseCode } = req.params;
+    const { isCancelled } = req.body; // Expects true or false
+
+    try {
+        await db.query(
+            'UPDATE courses SET is_cancelled = ? WHERE course_code = ?',
+            [isCancelled, courseCode]
+        );
+        res.json({ message: `Course ${courseCode} cancellation status updated to ${isCancelled}` });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Server error while cancelling course.' });
+    }
+});
+
+
 // Endpoint to trigger the REAL Python Bluetooth script
 app.post('/api/trigger-hardware-scan', (req, res) => {
     const { sessionId } = req.body;
