@@ -69,26 +69,46 @@ app.post('/api/login', async (req, res) => {
             return res.status(401).json({ error: 'Invalid username or password.' });
         }
         const user = users[0];
-        // Step 2: Check if the password matches the hashed password in the database
+        
+        // Step 2: Check if the password matches
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
             return res.status(401).json({ error: 'Invalid username or password.' });
         }
-        // Step 3: Create a secure JWT token (the "digital key")
+
+        // ==============================================================
+        // NEW STEP: Check if this user has a registered device
+        // ==============================================================
+        let registeredMacAddress = null;
+        let hasDevice = false;
+
+        // We query the devices table using the user's ID
+        const [devices] = await db.query('SELECT mac_address FROM devices WHERE student_id = ?', [user.id]);
+        
+        if (devices.length > 0) {
+            hasDevice = true;
+            registeredMacAddress = devices[0].mac_address;
+        }
+        // ==============================================================
+
+        // Step 3: Create a secure JWT token
         const token = jwt.sign(
             { userId: user.id, role: user.role }, 
             process.env.JWT_SECRET, 
-            { expiresIn: '8h' } // Token expires in 8 hours
+            { expiresIn: '8h' } 
         );
 
-        userData = {
+        // Step 4: Add the new device info to the userData object
+        const userData = {
             id: user?.id,
             username: user?.username,
             yearLevel: user?.year_level,
-            role: user?.role
+            role: user?.role,
+            hasRegisteredDevice: hasDevice,        // NEW: true or false
+            registeredMacAddress: registeredMacAddress // NEW: "AA:BB:CC..." or null
         };
 
-        // Step 4: Send the token and user role back to the React web app
+        // Step 5: Send everything back to React
         res.json({ 
             message: 'Login successful!', 
             token: token, 
