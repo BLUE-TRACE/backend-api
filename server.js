@@ -610,7 +610,8 @@ app.get('/api/timetable/:userId', async (req, res) => {
             Tuesday: [],
             Wednesday: [],
             Thursday: [],
-            Friday: []
+            Friday: [],
+            Saturday: [],
         };
 
         // Sort the courses into their specific days
