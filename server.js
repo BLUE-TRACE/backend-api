@@ -726,6 +726,62 @@ app.post('/api/trigger-hardware-scan', (req, res) => {
 });
 
 
+
+
+// ==========================================
+// 13. GET LECTURER COURSE ASSIGNMENTS API
+// ==========================================
+app.get('/api/lecturer/:lecturerId/courses', async (req, res) => {
+    const { lecturerId } = req.params;
+
+    try {
+        // 1. Get Assigned Courses (Using the junction table)
+        const [assignedRaw] = await db.query(`
+            SELECT c.course_code, c.course_name, c.year_level 
+            FROM courses c
+            JOIN lecturer_assignments la ON c.course_code = la.course_code
+            WHERE la.lecturer_id = ?
+        `, [lecturerId]);
+
+        // 2. Get Available Courses (Courses NOT assigned to this lecturer)
+        const [availableRaw] = await db.query(`
+            SELECT course_code, course_name, year_level 
+            FROM courses
+            WHERE course_code NOT IN (
+                SELECT course_code FROM lecturer_assignments WHERE lecturer_id = ?
+            )
+        `, [lecturerId]);
+
+        // 3. Helper function to group the courses by Year Level (1, 2, 3, 4)
+        // This makes the React frontend's job incredibly easy!
+        const formatByYear = (coursesArray) => {
+            const grouped = { 1: [], 2: [], 3: [], 4: [] };
+            coursesArray.forEach(course => {
+                // Ensure the year level is valid before pushing
+                if (grouped[course.year_level]) {
+                    grouped[course.year_level].push({ 
+                        code: course.course_code, 
+                        name: course.course_name 
+                    });
+                }
+            });
+            return grouped;
+        };
+
+        // 4. Send the perfectly formatted package back to React
+        res.json({
+            assigned: formatByYear(assignedRaw),
+            available: formatByYear(availableRaw)
+        });
+
+    } catch (error) {
+        console.error('Error fetching lecturer courses:', error);
+        res.status(500).json({ error: 'Server error while fetching courses.' });
+    }
+});
+
+
+
 app.listen(PORT, async () => {
     console.log(`🚀 Server is running on port ${PORT}`);
     
