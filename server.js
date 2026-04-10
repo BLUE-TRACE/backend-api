@@ -487,67 +487,77 @@ app.post('/api/enroll', async (req, res) => {
 
 
 // ==========================================
-// 12. SESSION ATTENDANCE REPORT API
+// DETAILED SESSION SUMMARY API
 // ==========================================
-app.get('/api/reports/session/:sessionId', async (req, res) => {
-    // We get the specific session ID from the URL
+app.get('/api/session-summary-report/:sessionId', async (req, res) => {
     const { sessionId } = req.params;
-    try {
-        // Step 1: Find the session to see which course it belongs to
-        const [sessions] = await db.query(
-            'SELECT course_code, start_time, status FROM sessions WHERE id = ?', 
-            [sessionId]
-        );       
-        if (sessions.length === 0) {
-            return res.status(404).json({ error: 'Session not found.' });
-        }       
-        const sessionData = sessions[0];
-        const courseCode = sessionData.course_code;
 
-        // Step 2: Get EVERY student officially enrolled in this course
-        const [enrolledStudents] = await db.query(
-            `SELECT u.id AS student_id, u.username 
-             FROM enrollments e 
-             JOIN users u ON e.student_id = u.id 
-             WHERE e.course_code = ?`,
-            [courseCode]
-        );
-        // Step 3: Get ONLY the students who were marked PRESENT by the Bluetooth scanner
-        const [presentRecords] = await db.query(
-            `SELECT student_id 
-             FROM attendance_logs 
-             WHERE session_id = ? AND status = 'present'`,
+    try {
+        // 1. Fetch Session Details (Adjust table/column names to match your DB)
+        // Assuming you have a 'sessions' or 'lectures' table
+        const [sessionRows] = await db.query(
+            `SELECT id AS sessionId, course_code AS courseCode, status, start_time AS startTime 
+             FROM sessions WHERE id = ?`, 
             [sessionId]
         );
-        // Step 4: The Math Engine - Calculate who is missing
-        // First, extract just the ID numbers of the present students into a simple list
-        const presentStudentIds = presentRecords.map(record => record.student_id);
-        // Filter the master enrollment list into two separate groups
-        const presentList = enrolledStudents.filter(student => presentStudentIds.includes(student.student_id));
-        const absentList = enrolledStudents.filter(student => !presentStudentIds.includes(student.student_id));
-        // Step 5: Send the beautiful, structured report back to the frontend
+
+        if (sessionRows.length === 0) {
+            return res.status(404).json({ error: "Session not found" });
+        }
+        
+        const sessionDetails = sessionRows[0];
+        const courseCode = sessionDetails.courseCode;
+
+        // 2. Fetch Present Students (From attendance_logs)
+        const [presentStudents] = await db.query(
+            `SELECT u.id AS student_id, u.username 
+             FROM attendance_logs a
+             JOIN users u ON a.student_id = u.id
+             WHERE a.session_id = ?`,
+            [sessionId]
+        );
+
+        // 3. Fetch Absent Students 
+        // (Students enrolled in the course who are NOT in the attendance_logs for this session)
+        const [absentStudents] = await db.query(
+            `SELECT u.id AS student_id, u.username 
+             FROM enrollments e
+             JOIN users u ON e.student_id = u.id
+             WHERE e.course_code = ? 
+             AND u.id NOT IN (
+                 SELECT student_id FROM attendance_logs WHERE session_id = ?
+             )`,
+            [courseCode, sessionId]
+        );
+
+        // 4. Calculate Summary Totals
+        const presentCount = presentStudents.length;
+        const absentCount = absentStudents.length;
+        const totalEnrolled = presentCount + absentCount;
+
+        // 5. Send the exact JSON structure the React frontend expects
         res.status(200).json({
-            message: 'Attendance report generated successfully!',
+            message: "Attendance report generated successfully!",
             sessionDetails: {
-                sessionId: parseInt(sessionId),
-                courseCode: courseCode,
-                status: sessionData.status,
-                startTime: sessionData.start_time
+                sessionId: sessionDetails.sessionId,
+                courseCode: sessionDetails.courseCode,
+                status: sessionDetails.status,
+                startTime: sessionDetails.startTime
             },
             summary: {
-                totalEnrolled: enrolledStudents.length,
-                presentCount: presentList.length,
-                absentCount: absentList.length
+                totalEnrolled: totalEnrolled,
+                presentCount: presentCount,
+                absentCount: absentCount
             },
             data: {
-                presentStudents: presentList,
-                absentStudents: absentList
+                presentStudents: presentStudents,
+                absentStudents: absentStudents
             }
         });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error while generating the attendance report.' });
+        console.error("Detailed Report Fetch Error:", error);
+        res.status(500).json({ error: "Server error while fetching detailed report." });
     }
 });
 
