@@ -487,7 +487,7 @@ app.post('/api/enroll', async (req, res) => {
 
 
 // ==========================================
-// DETAILED SESSION SUMMARY API
+// 12. DETAILED SESSION SUMMARY API
 // ==========================================
 app.get('/api/session-summary-report/:sessionId', async (req, res) => {
     const { sessionId } = req.params;
@@ -647,6 +647,51 @@ app.put('/api/courses/:courseCode/cancel', async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Server error while cancelling course.' });
+    }
+});
+
+// ==========================================
+// 15. FETCH STUDENT COURSES API
+// ==========================================
+app.get('/api/student-courses/:studentId', async (req, res) => {
+    const { studentId } = req.params;
+
+    try {
+        // 1. Get the student's year level
+        const [students] = await db.query('SELECT year_level FROM users WHERE id = ?', [studentId]);
+        if (students.length === 0) {
+            return res.status(404).json({ error: 'Student not found.' });
+        }
+        const studentYear = students[0].year_level;
+
+        // 2. Fetch courses the student is ALREADY enrolled in
+        const [enrolledCourses] = await db.query(
+            `SELECT c.course_code, c.course_name, c.day, c.start_time, c.end_time 
+             FROM enrollments e
+             JOIN courses c ON e.course_code = c.course_code
+             WHERE e.student_id = ?`,
+            [studentId]
+        );
+
+        // 3. Fetch AVAILABLE courses (Matches year_level, but NOT already enrolled)
+        const [availableCourses] = await db.query(
+            `SELECT course_code, course_name, day, start_time, end_time 
+             FROM courses 
+             WHERE year_level = ? 
+             AND course_code NOT IN (
+                 SELECT course_code FROM enrollments WHERE student_id = ?
+             )`,
+            [studentYear, studentId]
+        );
+
+        res.status(200).json({
+            enrolled: enrolledCourses,
+            available: availableCourses
+        });
+
+    } catch (error) {
+        console.error("Error fetching student courses:", error);
+        res.status(500).json({ error: 'Server error fetching courses.' });
     }
 });
 
